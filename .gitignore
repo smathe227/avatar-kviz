@@ -1,0 +1,13 @@
+*.bak
+*.bak2
+*.md
+__pycache__/
+*.pyc
+tunnel.py
+tunnel_keepalive.js
+all_in_one.py
+start_bg.py
+start_server.py
+start_persistent.sh
+start_tunnel.sh
+restart_server.sh
