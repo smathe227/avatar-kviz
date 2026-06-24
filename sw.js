@@ -1,6 +1,6 @@
 const CACHE = "avatar-kviz-v1";
 const FILES = [
-  "index.html",
+  "Avatar_Kviz_Deti_v2.html",
   "manifest.json",
   "icons/icon.svg",
   "icons/icon-192.png",

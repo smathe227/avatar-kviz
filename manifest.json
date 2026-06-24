@@ -2,7 +2,7 @@
   "name": "🔥 Avatar Kvíz pre deti",
   "short_name": "Avatar Kvíz",
   "description": "Zábavný a vzdelávací kvíz z filmu Avatar pre deti",
-  "start_url": ".",
+  "start_url": "Avatar_Kviz_Deti_v2.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#020617",
