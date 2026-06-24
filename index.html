@@ -83,9 +83,6 @@ body{
   border-radius:22px;box-shadow:0 16px 40px rgba(0,0,0,.7);overflow:hidden}
 .pleft{padding:12px 13px 15px}.pright{padding:12px 14px 16px}
 
-
-/* ── PANDORA FOREST BACKGROUND ── */
-#pandoraBg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;pointer-events:none;opacity:0.7}
 /* ── PUZZLE ── */
 .puz-wrap{background:rgba(2,6,23,.7);border-radius:18px;
   border:1.5px solid rgba(78,203,255,.3);padding:11px}
@@ -2821,14 +2818,12 @@ function pickAnswer(btn,opt,isCorrect,q){
     score+=10;corr++;
     fb.innerHTML="⭐ Správne! Výborne! ⭐";fb.className="feedback fb-ok";
     revealTile();
-    if(window.pandoraForest)window.pandoraForest.onCorrect();
     if(audioOn)spk("Správne! Výborne, si šikovný!");
   } else {
     btn.classList.add("wrong");
     wrong++;wrongByQ.push({q:q.q,cat:q.cat,yourAns:opt.txt,correct:q.a.txt});
     fb.textContent=`❌ Správne je: ${q.a.txt}`;fb.className="feedback fb-bad";
     coverTile();
-    if(window.pandoraForest)window.pandoraForest.onWrong();
     if(audioOn)spk(`Nesprávne. Správna odpoveď je ${q.a.txt}. Nevadí, skúsime ďalšiu!`);
   }
   document.getElementById("score").textContent=score;
@@ -2971,158 +2966,6 @@ if('serviceWorker' in navigator){
     .catch(e => console.log('SW registration failed:', e));
 }
 </script>
-
-<!-- PANDORA FOREST BACKGROUND -->
-<script>
-(function(){
-  const c=document.createElement('canvas');
-  c.id='pandoraBg';
-  document.body.prepend(c);
-  const x=c.getContext('2d');
-  let W,H,t=0,glow=0,glowT=0;
-
-  function rs(){W=c.width=innerWidth;H=c.height=innerHeight;}
-  addEventListener('resize',rs);rs();
-
-  // Vines hanging from top
-  const vines=[];
-  for(let i=0;i<Math.min(10,W/70);i++)vines.push({
-    x:Math.random()*W,len:100+Math.random()*150,swa:Math.random()*0.02+0.01,swi:Math.random()*6.28,
-    ds:Array.from({length:2+Math.floor(Math.random()*3)},()=>({o:0.2+Math.random()*0.6,s:1.5+Math.random()*2.5,h:200+Math.random()*50}))
-  });
-
-  // Ground glowing plants
-  const pts=[];
-  for(let i=0;i<Math.min(12,W/50);i++)pts.push({
-    x:Math.random()*W,h:25+Math.random()*45,hu:120+Math.random()*80,ph:Math.random()*6.28,sz:3+Math.random()*4
-  });
-
-  // Floating woodsprites (Atokirina)
-  const ss=[];
-  for(let i=0;i<Math.min(30,W*H/18000);i++)ss.push({
-    x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-0.5)*0.3,vy:-0.1-Math.random()*0.3,
-    sz:2+Math.random()*3,hu:180+Math.random()*60,ph:Math.random()*6.28,lf:Math.random()
-  });
-
-  // Ikran
-  const ik={x:-200,y:0,sp:0.6,wp:0,ac:false,tm:0};
-
-  function draw(){
-    t++;
-
-    // Glow transition
-    glow+=(glowT-glow)*0.06;
-    if(glowT>0)glowT*=0.98;
-    if(glowT<0.01)glowT=0;
-
-    // Update woodsprites
-    ss.forEach(s=>{
-      s.x+=s.vx+Math.sin(t*0.008+s.ph)*0.15;
-      s.y+=s.vy;s.lf+=0.003;
-      if(s.lf>1||s.y<-20||s.x<-20||s.x>W+20){
-        s.x=Math.random()*W;s.y=H+10;s.lf=0;s.vy=-0.1-Math.random()*0.3;
-      }
-    });
-
-    // Update Ikran
-    ik.tm++;ik.wp+=0.07;
-    if(!ik.ac&&ik.tm>500+Math.random()*300){
-      ik.ac=true;ik.x=-120;ik.y=40+Math.random()*H*0.3;ik.sp=0.5+Math.random()*0.4;ik.tm=0;
-    }
-    if(ik.ac){ik.x+=ik.sp;if(ik.x>W+120){ik.ac=false;ik.tm=0;}}
-
-    // Clear
-    x.clearRect(0,0,W,H);
-
-    // Background gradient
-    const bg=x.createLinearGradient(0,0,0,H);
-    bg.addColorStop(0,'rgba(2,6,23,0.9)');
-    bg.addColorStop(0.3,'rgba(8,18,38,0.85)');
-    bg.addColorStop(0.65,'rgba(4,18,14,0.8)');
-    bg.addColorStop(1,'rgba(1,12,8,0.9)');
-    x.fillStyle=bg;x.fillRect(0,0,W,H);
-
-    // Vines
-    vines.forEach(v=>{
-      x.strokeStyle='rgba(15,70,40,0.25)';x.lineWidth=1.5;
-      x.beginPath();const sw=Math.sin(t*v.swa+v.swi)*12;
-      x.moveTo(v.x,0);x.quadraticCurveTo(v.x+sw*0.5,v.len*0.5,v.x+sw,v.len);x.stroke();
-      v.ds.forEach(d=>{
-        const y=v.len*d.o,ds=Math.sin(t*v.swa+v.swi+d.o)*12*d.o;
-        const p=0.5+0.5*Math.sin(t*0.02+d.o*8),sz=d.s*p*(1+glow*0.6);
-        x.beginPath();x.arc(v.x+ds,y,sz,0,6.28);
-        x.fillStyle=`hsla(${d.h},90%,70%,${0.35*p})`;x.fill();
-        x.beginPath();x.arc(v.x+ds,y,sz*3,0,6.28);
-        x.fillStyle=`hsla(${d.h},90%,70%,${0.07*p})`;x.fill();
-      });
-    });
-
-    // Plants
-    pts.forEach(p=>{
-      const s=Math.sin(t*0.013+p.ph),pl=0.5+0.5*s,gl=pl*(1+glow*0.7);
-      x.strokeStyle=`hsla(${p.hu},60%,35%,0.25)`;x.lineWidth=1.5;
-      x.beginPath();x.moveTo(p.x,H);x.lineTo(p.x,H-p.h);x.stroke();
-      const r=p.sz*gl;
-      x.beginPath();x.arc(p.x,H-p.h,r,0,6.28);
-      x.fillStyle=`hsla(${p.hu},100%,70%,${0.4*gl})`;x.fill();
-      x.beginPath();x.arc(p.x,H-p.h,r*3,0,6.28);
-      x.fillStyle=`hsla(${p.hu},100%,70%,${0.08*gl})`;x.fill();
-    });
-
-    // Woodsprites
-    ss.forEach(s=>{
-      const p=0.4+0.6*Math.sin(t*0.025+s.ph),gl=s.sz*p*(1+glow*0.4);
-      x.beginPath();x.arc(s.x,s.y,gl,0,6.28);
-      x.fillStyle=`hsla(${s.hu},90%,85%,${0.5*p})`;x.fill();
-      x.beginPath();x.arc(s.x,s.y,gl*4,0,6.28);
-      x.fillStyle=`hsla(${s.hu},90%,85%,${0.06*p})`;x.fill();
-    });
-
-    // Ikran
-    if(ik.ac){
-      const wa=12*Math.sin(ik.wp);
-      x.save();x.translate(ik.x,ik.y);x.scale(0.5,0.5);
-      x.strokeStyle='rgba(50,70,90,0.35)';x.lineWidth=3;
-      x.beginPath();x.moveTo(-20,0);
-      x.quadraticCurveTo(-10,-5,0,-2);x.quadraticCurveTo(10,0,20,0);
-      x.quadraticCurveTo(10,3,0,2);x.quadraticCurveTo(-10,5,-20,0);x.stroke();
-      // Wings
-      x.fillStyle='rgba(35,55,75,0.3)';
-      x.beginPath();x.moveTo(0,-2);
-      x.quadraticCurveTo(15,-wa-10,28,-wa-2);
-      x.quadraticCurveTo(15,-wa+8,0,-2);x.fill();
-      x.beginPath();x.moveTo(0,2);
-      x.quadraticCurveTo(15,wa+10,28,wa+2);
-      x.quadraticCurveTo(15,wa-8,0,2);x.fill();
-      // Tail
-      x.strokeStyle='rgba(35,55,75,0.25)';x.lineWidth=2;
-      x.beginPath();x.moveTo(-20,0);
-      x.quadraticCurveTo(-30,-8+Math.sin(ik.wp)*3,-35,-3);x.stroke();
-      x.restore();
-    }
-
-    requestAnimationFrame(draw);
-  }
-
-  window.pandoraForest={
-    onCorrect(){
-      glowT=0.5;
-      for(let i=0;i<4;i++)ss.push({
-        x:W*0.2+Math.random()*W*0.6,y:H*0.2+Math.random()*H*0.6,
-        vx:(Math.random()-0.5)*2.5,vy:-0.5-Math.random()*1.2,
-        sz:3+Math.random()*5,hu:40+Math.random()*30,ph:Math.random()*6.28,lf:0
-      });
-      if(ss.length>55)ss.splice(0,ss.length-55);
-    },
-    onWrong(){
-      glowT=-0.15;
-    }
-  };
-
-  draw();
-})();
-</script>
-
 </body>
 
 </html>
