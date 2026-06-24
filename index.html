@@ -27,7 +27,7 @@
 body{
   font-family:'Nunito','Comic Sans MS','Arial','Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji','Android Emoji',sans-serif;
   min-height:100vh;
-  background:transparent;
+  background:linear-gradient(135deg,#020617 0%,#0f172a 40%,#1e1035 100%);
   color:#fff;
   padding:8px;
   overflow-x:hidden;
@@ -85,7 +85,7 @@ body{
 
 
 /* ── PANDORA FOREST BACKGROUND ── */
-#pandoraBg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0.85}
+#pandoraBg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;pointer-events:none;opacity:0.7}
 /* ── PUZZLE ── */
 .puz-wrap{background:rgba(2,6,23,.7);border-radius:18px;
   border:1.5px solid rgba(78,203,255,.3);padding:11px}
@@ -3036,17 +3036,11 @@ if('serviceWorker' in navigator){
 
     // Background gradient
     const bg=x.createLinearGradient(0,0,0,H);
-    bg.addColorStop(0,'#020617');
-    bg.addColorStop(0.3,'#081226');
-    bg.addColorStop(0.55,'#04120e');
-    bg.addColorStop(1,'#010c08');
+    bg.addColorStop(0,'rgba(2,6,23,0.9)');
+    bg.addColorStop(0.3,'rgba(8,18,38,0.85)');
+    bg.addColorStop(0.65,'rgba(4,18,14,0.8)');
+    bg.addColorStop(1,'rgba(1,12,8,0.9)');
     x.fillStyle=bg;x.fillRect(0,0,W,H);
-    
-    // Extra dark vignette overlay
-    const vg=x.createRadialGradient(W/2,H/2,W*0.2,W/2,H/2,Math.max(W,H)*0.7);
-    vg.addColorStop(0,'rgba(0,0,0,0)');
-    vg.addColorStop(1,'rgba(0,0,0,0.3)');
-    x.fillStyle=vg;x.fillRect(0,0,W,H);
 
     // Vines
     vines.forEach(v=>{
