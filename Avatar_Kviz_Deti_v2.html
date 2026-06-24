@@ -2556,44 +2556,63 @@ function setSpd(r,el){
 }
 
 // ─── VOICE INPUT ─────────────────────────────────
-let recog=null, recogOn=false;
+let recogOn=false;
 function setupRecog(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR)return null;
-  const r=new SR();
-  r.lang="sk-SK";r.continuous=false;r.interimResults=false;
-  r.onresult=e=>{
-    const txt=e.results[0][0].transcript.toLowerCase().trim();
-    document.getElementById("voiceStat").textContent=`🎤 Počul som: „${txt}"`;
-    matchVoiceAnswer(txt);
-    stopRecog();
-  };
-  r.onerror=()=>{
-    document.getElementById("voiceStat").textContent="😕 Nerozumel som, skús znova.";
-    stopRecog();
-  };
-  r.onend=()=>stopRecog();
-  return r;
+  try{
+    const r=new SR();
+    r.lang="sk-SK";r.continuous=false;r.interimResults=false;
+    r.onresult=e=>{
+      const txt=e.results[0][0].transcript.toLowerCase().trim();
+      document.getElementById("voiceStat").textContent=`🎤 Počul som: „${txt}"`;
+      matchVoiceAnswer(txt);
+    };
+    r.onerror=e=>{
+      console.warn("SpeechRecognition error:", e.error);
+      const msgs={
+        "no-speech":"😶 Nič som nepočul, skús znova.",
+        "aborted":"🔄 Skús znova.",
+        "audio-capture":"🎤 Mikrofón nie je povolený. Povoľ mikrofón v prehliadači.",
+        "not-allowed":"🚫 Mikrofón zablokovaný. Povoľ ho v nastaveniach stránky.",
+        "network":"🌐 Chyba siete, skús znova."
+      };
+      document.getElementById("voiceStat").textContent=msgs[e.error]||"😕 Nerozumel som, skús znova.";
+    };
+    r.onend=()=>{
+      if(recogOn) setTimeout(()=>{
+        try{recogOn=false;stopRecog();}catch(e){}
+      }, 300);
+    };
+    return r;
+  } catch(e){
+    console.error("SpeechRecognition init error:", e);
+    return null;
+  }
 }
 function toggleVoiceInput(){
   if(answered)return;
-  if(!recog)recog=setupRecog();
+  if(recogOn){stopRecog();return;}
+  const recog=setupRecog();
   if(!recog){
     document.getElementById("voiceStat").textContent="😕 Hlasové zadávanie nie je dostupné v tomto prehliadači.";
     return;
   }
-  if(recogOn){stopRecog();return;}
   recogOn=true;
   const b=document.getElementById("voiceBtn");
   b.classList.add("listening");b.textContent="🔴 Počúvam…";
   document.getElementById("voiceStat").textContent="🎤 Hovor odpoveď…";
-  try{recog.start();}catch(e){stopRecog();}
+  try{recog.start();}catch(e){
+    console.error("recog.start error:", e);
+    document.getElementById("voiceStat").textContent="😕 Chyba mikrofónu, skús znova.";
+    recogOn=false;
+    b.classList.remove("listening");b.textContent="🎤 Hovor!";
+  }
 }
 function stopRecog(){
   recogOn=false;
   const b=document.getElementById("voiceBtn");
-  b.classList.remove("listening");b.textContent="🎤 Hovor!";
-  try{recog&&recog.stop();}catch(e){}
+  if(b){b.classList.remove("listening");b.textContent="🎤 Hovor!";}
 }
 function matchVoiceAnswer(spoken){
   const q=questions[cur];
