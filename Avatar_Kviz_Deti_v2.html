@@ -2433,7 +2433,7 @@ const QUESTIONS = [
 const TILES=30, COLS=6, ROWS=5;
 let questions=[], cur=0, score=0, corr=0, wrong=0,
     revd=0, answered=false, audioOn=true, spd=1.0,
-    imgIdx=0, speaking=false;
+    imgIdx=0, speaking=false, readGen=0;
 let wrongByQ=[]; // track wrong answers for evaluation
 
 // category labels
@@ -2517,23 +2517,31 @@ function spk(txt,cb){
   const u=new SpeechSynthesisUtterance(txt);
   u.rate=spd;u.pitch=1.15;u.volume=1;
   const v=bestVoice();if(v){u.voice=v;u.lang=v.lang;}else u.lang="sk-SK";
-  u.onend=()=>{if(cb)cb();};u.onerror=()=>{if(cb)cb();};
-  speechSynthesis.speak(u);
+  let done=false;
+  u.onend=()=>{if(!done){done=true;if(cb)cb();}};
+  u.onerror=()=>{if(!done){done=true;if(cb)cb();}};
+  setTimeout(()=>{speechSynthesis.speak(u);},30);
 }
 function ms(n){return new Promise(r=>setTimeout(r,n));}
 function setNR(t){document.getElementById("nowRdg").textContent=t;}
 
 async function readFull(q,opts){
   if(!audioOn)return;
+  speechSynthesis.cancel();
+  const myGen=++readGen;
   speaking=true;
   setNR("🎙️ Čítam otázku…");
-  await new Promise(r=>spk(q.q,r));
+  await new Promise(r=>spk(q.q,()=>{if(readGen===myGen)r();else r();}));
+  if(readGen!==myGen||!speaking||!audioOn){setNR("");speaking=false;return;}
   await ms(2500);
+  if(readGen!==myGen||!speaking||!audioOn){setNR("");speaking=false;return;}
   for(let i=0;i<opts.length;i++){
-    if(!audioOn||!speaking)break;
+    if(readGen!==myGen||!audioOn||!speaking){setNR("");speaking=false;return;}
     setNR(`🎙️ Možnosť ${i+1}: ${opts[i].txt}`);
-    await new Promise(r=>spk(`Možnosť ${i+1}: ${opts[i].txt}`,r));
+    await new Promise(r=>spk(`Možnosť ${i+1}: ${opts[i].txt}`,()=>{if(readGen===myGen)r();else r();}));
+    if(readGen!==myGen||!speaking||!audioOn){setNR("");speaking=false;return;}
     await ms(2500);
+    if(readGen!==myGen||!speaking||!audioOn){setNR("");speaking=false;return;}
   }
   setNR("");speaking=false;
 }
@@ -2797,6 +2805,7 @@ function renderQ(){
     grid.appendChild(b);
   });
 
+  speechSynthesis.cancel();speaking=false;readGen++;
   readFull(q,opts);
 }
 
