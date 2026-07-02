@@ -290,6 +290,11 @@ document.addEventListener("DOMContentLoaded", function() {
 <body><div id="initLoading" style="text-align:center;padding:20px;font-size:1.2rem;color:#fbbf24;font-weight:bold">⏳ Načítavam kvíz…</div>
 
 
+<!-- YouTube player for background music -->
+<div id="ytPlayer-container" style="position:fixed;left:-9999px;top:0;width:640px;height:390px;overflow:hidden;pointer-events:none;opacity:0;z-index:-1">
+ <div id="ytPlayer"></div>
+</div>
+
 <!-- HEADER -->
 <div class="hdr">
  <h1>🔥 Avatar Kvíz pre deti</h1>
@@ -2969,22 +2974,33 @@ var AVATAR_SONGS=[
 ];
 
 function onYouTubeIframeAPIReady(){
+ console.log("onYouTubeIframeAPIReady: YT API ready");
+ window._ytApiReady=true;
  musicYTApiReady=true;
- if(musicOn&&!musicInitDone)createYTPlayer();
+ if(musicOn&&!musicInitDone){
+  try{createYTPlayer();}catch(e){console.warn("YT create error:",e);}
+ }
 }
 function createYTPlayer(){
  if(musicYTPlayer)return;
  musicInitDone=true;
+ // Ensure container exists
+ var cont=document.getElementById("ytPlayer-container");
+ if(!cont){
+  cont=document.createElement("div");
+  cont.id="ytPlayer-container";
+  cont.style.cssText="position:fixed;left:-9999px;top:0;width:640px;height:390px;overflow:hidden;pointer-events:none;opacity:0;z-index:-1";
+  document.body.appendChild(cont);
+ }
  var div=document.getElementById("ytPlayer");
  if(!div){
   div=document.createElement("div");
   div.id="ytPlayer";
-  div.style.cssText="position:fixed;bottom:-200px;left:-200px;width:1px;height:1px;opacity:0.01;pointer-events:none";
-  document.body.appendChild(div);
+  cont.appendChild(div);
  }
  try{
   musicYTPlayer=new YT.Player("ytPlayer",{
-   height:"1",width:"1",
+   height:"390",width:"640",
    playerVars:{
     controls:0,disablekb:1,enablejsapi:1,
     fs:0,iv_load_policy:3,modestbranding:1,
@@ -3019,13 +3035,45 @@ function playSong(idx){
 
 // Load YouTube API
 function initMusic(){
- if(typeof YT!=='undefined'&&YT.Player){createYTPlayer();return;}
+ console.log("initMusic: Starting YouTube API load");
+ if(typeof YT!=='undefined'&&YT.Player){
+  console.log("initMusic: YT API already loaded");
+  createYTPlayer();
+  return;
+ }
  // Load YouTube Iframe API
  var tag=document.createElement("script");
  tag.src="https://www.youtube.com/iframe_api";
+ tag.onload=function(){
+  console.log("initMusic: YT API script loaded");
+  if(typeof onYouTubeIframeAPIReady==='function'&&!window._ytApiReady){
+   // The API should call onYouTubeIframeAPIReady itself
+   // But if it doesn't within a short time, manually trigger
+   setTimeout(function(){
+    if(!window._ytApiReady){
+     console.log("initMusic: Manually triggering player creation");
+     if(musicOn&&!musicInitDone)createYTPlayer();
+    }
+   },3000);
+  }
+ };
+ tag.onerror=function(){
+  console.warn("initMusic: YT API script failed to load");
+  // Show status to user
+  var mb=document.getElementById("musicBtn");
+  if(mb){mb.textContent="\uD83D\uDD07 Hudba: N/A";mb.classList.add("off");}
+ };
  var fs=document.getElementsByTagName("script")[0];
  if(fs&&fs.parentNode)fs.parentNode.insertBefore(tag,fs);
  else document.head.appendChild(tag);
+ // Fallback: if YT API doesn't load within 10s, show status
+ setTimeout(function(){
+  if(!musicYTPlayer&&musicOn){
+   console.warn("initMusic: YT API timeout - player not created");
+   var mb=document.getElementById("musicBtn");
+   if(mb){mb.textContent="\uD83D\uDD07 Hudba: N/A";mb.classList.add("off");}
+  }
+ },10000);
 }
 
 function toggleMusic(){
