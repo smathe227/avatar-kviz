@@ -2907,104 +2907,230 @@ function endGame(){spkGen++;speechSynthesis.cancel();speaking=false;stopRecog();
 
 // ─── INIT ────────────────────────────────────────
 
-// ─── BACKGROUND MUSIC (Web Audio API) ──────────
+// ─── BACKGROUND MUSIC (Web Audio API - Avatar ambient) ──
 let musicOn=true;
-let musicVol=0.2; // 20%
+let musicVol=0.2;
 let musicCtx=null;
-let musicNodes=null;
+let musicNodes=[];
 let musicGain=null;
+let musicPlaying=false;
 
 function initMusic(){
  if(musicCtx) return;
  try{
-  const AC=window.AudioContext||window.webkitAudioContext;
+  var AC=window.AudioContext||window.webkitAudioContext;
   if(!AC) return;
   musicCtx=new AC();
-  // Resume on first user interaction (autoplay policy)
+  // Resume on user interaction
   function resumeAudio(){
    if(musicCtx&&musicCtx.state==="suspended")musicCtx.resume();
   }
-  document.addEventListener("click",resumeAudio,{once:true});
-  document.addEventListener("touchstart",resumeAudio,{once:true});
-  document.addEventListener("keydown",resumeAudio,{once:true});
-  // Also try to resume immediately (works if user already interacted)
+  document.addEventListener("click",resumeAudio,{once:false});
+  document.addEventListener("touchstart",resumeAudio,{once:false});
   if(musicCtx.state==="suspended")musicCtx.resume();
   
   musicGain=musicCtx.createGain();
   musicGain.gain.value=musicVol;
   musicGain.connect(musicCtx.destination);
   
-  // Create calming ambient pad sounds like Avatar soundtrack
-  // Using detuned oscillators with slow LFO modulation
-  const notes=[55,65.41,73.42,82.41,98,110,130.81,146.83]; // Low ambient notes
-  const oscNodes=[];
+  // Create reverb for spatial effect
+  var wetGain=musicCtx.createGain();
+  wetGain.gain.value=0.4;
+  var delay=musicCtx.createDelay(1.0);
+  delay.delayTime.value=0.6;
+  var feedback=musicCtx.createGain();
+  feedback.gain.value=0.25;
   
-  // Generate 4 layers of soft pads
-  for(let layer=0;layer<4;layer++){
-   const baseNote=notes[layer % notes.length];
-   const osc1=musicCtx.createOscillator();
-   const osc2=musicCtx.createOscillator();
-   const gain=musicCtx.createGain();
-   const filter=musicCtx.createBiquadFilter();
-   const lfo=musicCtx.createOscillator();
-   const lfoGain=musicCtx.createGain();
+  var convolver=null;
+  try{
+   convolver=musicCtx.createConvolver();
+   var sr=musicCtx.sampleRate;
+   var len=sr*2;
+   var buf=musicCtx.createBuffer(2,len,sr);
+   for(var ch=0;ch<2;ch++){
+    var d=buf.getChannelData(ch);
+    for(var i=0;i<len;i++){
+     var t=i/len;
+     d[i]=(Math.random()*2-1)*Math.exp(-t*8)*(ch===0?1:0.7);
+    }
+   }
+   convolver.buffer=buf;
+  }catch(e){convolver=null;}
+  
+  // Create three layers of atmospheric pads
+  // Each layer = multiple oscillators for rich sound
+  var layers=[
+   {base:110,detune:3,filter:400,vol:0.08,type:"triangle"},   // A2 warm pad
+   {base:146.83,detune:2,filter:600,vol:0.06,type:"sine"},    // D3
+   {base:196,detune:4,filter:800,vol:0.05,type:"sine"},       // G3
+  ];
+  
+  // Chord progression: Am - F - C - G (very gentle, calming)
+  var chords=[
+   [110,130.81,164.81,220],  // Am
+   [87.31,110,130.81,174.61], // F
+   [104.66,130.81,164.81,196], // C
+   [98,123.47,146.83,196],     // G
+  ];
+  
+  // Create master reverb send
+  var reverbSend=musicCtx.createGain();
+  reverbSend.gain.value=0.3;
+  if(convolver){
+   reverbSend.connect(convolver);
+   convolver.connect(musicGain);
+  }
+  
+  function createPadLayer(freq,detune,filterFreq,vol,type){
+   var osc1=musicCtx.createOscillator();
+   var osc2=musicCtx.createOscillator();
+   var osc3=musicCtx.createOscillator();
+   var gain=musicCtx.createGain();
+   var filter=musicCtx.createBiquadFilter();
+   var lfo=musicCtx.createOscillator();
+   var lfoGain=musicCtx.createGain();
    
-   osc1.type="sine";
-   osc1.frequency.value=baseNote * (layer<2?1:2);
-   osc2.type="sine";
-   osc2.frequency.value=baseNote * (layer<2?1:2) * 1.005; // Slight detune for warmth
+   osc1.type=type||"sine";
+   osc1.frequency.value=freq;
+   osc2.type=type||"sine";
+   osc2.frequency.value=freq*2;
+   osc3.type="sine";
+   osc3.frequency.value=freq*4;
    
    filter.type="lowpass";
-   filter.frequency.value=300 + layer * 200;
-   filter.Q.value=1;
+   filter.frequency.value=filterFreq;
+   filter.Q.value=0.5;
    
-   gain.gain.value=0.04 + layer * 0.02;
+   gain.gain.value=vol;
+   gain.gain.setValueAtTime(0,musicCtx.currentTime);
+   gain.gain.linearRampToValueAtTime(vol,musicCtx.currentTime+3);
    
-   // Slow modulation
+   // Gentle LFO modulation
    lfo.type="sine";
-   lfo.frequency.value=0.05 + layer * 0.03; // Very slow LFO
-   lfoGain.gain.value=15 + layer * 10;
-   
+   lfo.frequency.value=0.08+Math.random()*0.04;
+   lfoGain.gain.value=30+Math.random()*20;
    lfo.connect(lfoGain);
    lfoGain.connect(filter.frequency);
-   lfo.start();
    
    osc1.connect(filter);
    osc2.connect(filter);
+   osc3.connect(gain);
    filter.connect(gain);
    gain.connect(musicGain);
+   // Also send to reverb
+   if(convolver){
+    var revSend=musicCtx.createGain();
+    revSend.gain.value=0.5;
+    gain.connect(revSend);
+    revSend.connect(convolver);
+   }
    
    osc1.start();
    osc2.start();
+   osc3.start();
+   lfo.start();
    
-   oscNodes.push(osc1,osc2,lfo);
+   return {osc1:osc1,osc2:osc2,osc3:osc3,lfo:lfo,gain:gain,filter:filter};
   }
   
-  musicNodes=oscNodes;
+  // Create pad layers
+  for(var l=0;l<layers.length;l++){
+   var ly=layers[l];
+   createPadLayer(ly.base,ly.detune,ly.filter,ly.vol,ly.type);
+  }
   
-  // Schedule note changes every 8-12 seconds for variation
-  function scheduleNotes(){
+  // Create gentle wind/atmosphere noise
+  var noiseNode=null;
+  try{
+   var bufSize=musicCtx.sampleRate*2;
+   var noiseBuf=musicCtx.createBuffer(1,bufSize,musicCtx.sampleRate);
+   var nd=noiseBuf.getChannelData(0);
+   for(var i=0;i<bufSize;i++){
+    nd[i]=Math.random()*2-1;
+   }
+   var noiseSrc=musicCtx.createBufferSource();
+   noiseSrc.buffer=noiseBuf;
+   noiseSrc.loop=true;
+   var noiseFilter=musicCtx.createBiquadFilter();
+   noiseFilter.type="lowpass";
+   noiseFilter.frequency.value=200;
+   noiseFilter.Q.value=0.5;
+   var noiseGain=musicCtx.createGain();
+   noiseGain.gain.value=0.015;
+   noiseSrc.connect(noiseFilter);
+   noiseFilter.connect(noiseGain);
+   noiseGain.connect(musicGain);
+   noiseSrc.start();
+   noiseNode=noiseSrc;
+  }catch(e){}
+  
+  // Create gentle wind chime / bell tones occasionally
+  var chimeInterval=null;
+  function playChime(){
+   if(!musicOn||!musicCtx||musicCtx.state==="suspended")return;
+   try{
+    var notes=[523.25,587.33,659.25,783.99,880,1046.5]; // C5,D5,E5,G5,A5,C6
+    var note=notes[Math.floor(Math.random()*notes.length)];
+    var osc=musicCtx.createOscillator();
+    var g=musicCtx.createGain();
+    osc.type="sine";
+    osc.frequency.value=note;
+    g.gain.setValueAtTime(0.03,musicCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,musicCtx.currentTime+2.5);
+    osc.connect(g);
+    g.connect(musicGain);
+    osc.start();
+    osc.stop(musicCtx.currentTime+2.5);
+   }catch(e){}
+  }
+  // Play soft chime notes occasionally
+  function scheduleChimes(){
+   if(!musicOn) return;
+   playChime();
+   setTimeout(function(){
+    if(musicOn) playChime();
+   },3000+Math.random()*4000);
+   chimeInterval=setTimeout(scheduleChimes,8000+Math.random()*6000);
+  }
+  chimeInterval=setTimeout(scheduleChimes,5000);
+  
+  // Slow chord changes every 12-20 seconds
+  var chordInterval=null;
+  var layerOscs=[];
+  function changeChords(){
    if(!musicOn||!musicCtx) return;
-   const now=musicCtx.currentTime;
-   oscNodes.forEach((o,i)=>{
-    if(i%3===0){ // Only oscillators, not LFOs
-     const n=notes[Math.floor(Math.random()*notes.length)];
-     const octave=Math.random()>0.6?2:1;
-     try{o.frequency.setTargetAtTime(n*octave,now+0.5,0.5);}catch(e){}
-    }
-   });
-   setTimeout(scheduleNotes,8000+Math.random()*4000);
+   try{
+    var chord=chords[Math.floor(Math.random()*chords.length)];
+    // Smoothly transition the base pad frequencies
+    var now=musicCtx.currentTime;
+    // Create a gentle melodic movement
+    var melodyNote=chord[Math.floor(Math.random()*chord.length)];
+    var melOsc=musicCtx.createOscillator();
+    var melG=musicCtx.createGain();
+    melOsc.type="triangle";
+    melOsc.frequency.value=melodyNote*2;
+    melG.gain.setValueAtTime(0,now);
+    melG.gain.linearRampToValueAtTime(0.02,now+1);
+    melG.gain.setValueAtTime(0.02,now+4);
+    melG.gain.exponentialRampToValueAtTime(0.001,now+7);
+    melOsc.connect(melG);
+    melG.connect(musicGain);
+    melOsc.start(now);
+    melOsc.stop(now+7);
+   }catch(e){}
+   chordInterval=setTimeout(changeChords,12000+Math.random()*8000);
   }
-  setTimeout(scheduleNotes,3000);
+  chordInterval=setTimeout(changeChords,3000);
+  
+  musicPlaying=true;
   musicOn=true;
-  if(musicCtx)updateMusicBtn();
- }catch(e){console.log("Music init:",e);updateMusicBtn();}
+  updateMusicBtn();
+ }catch(e){console.log("Music init err:",e);updateMusicBtn();}
 }
 
 function toggleMusic(){
  musicOn=!musicOn;
  if(musicOn){
-  // Resume AudioContext on user click (required by autoplay policy)
   if(musicCtx&&musicCtx.state==="suspended")musicCtx.resume();
   if(!musicCtx)initMusic();
   if(musicGain) musicGain.gain.value=musicVol;
@@ -3016,7 +3142,8 @@ function toggleMusic(){
 function setMusicVol(v){
  musicVol=parseInt(v)/100;
  if(musicGain) musicGain.gain.value=musicOn?musicVol:0;
- document.getElementById("musicVolLabel").textContent=v+"%";
+ var ml=document.getElementById("musicVolLabel");
+ if(ml) ml.textContent=v+"%";
 }
 function updateMusicBtn(){
  var b=document.getElementById("musicBtn");if(!b)return;
@@ -3025,12 +3152,11 @@ function updateMusicBtn(){
  } else {
   b.textContent="\uD83D\uDD07 Hudba: VYP";b.classList.add("off");
  }
- // Sync volume slider
  var mv=document.getElementById("musicVol");if(mv)mv.value=Math.round(musicVol*100);
  var ml=document.getElementById("musicVolLabel");if(ml)ml.textContent=Math.round(musicVol*100)+"%";
 }
 
-function showInstallUrl(){
+function showInstallUrl(){function showInstallUrl(){
  const el=document.getElementById("installUrl");
  if(el) el.textContent=location.href;
  const el2=document.getElementById("installLink");
