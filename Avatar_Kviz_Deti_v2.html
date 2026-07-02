@@ -2532,7 +2532,18 @@ function setupRecog(){
  }
 }
 function toggleVoiceInput(){
- if(answered)return;
+ // Allow voice input for "dalej" command even when answered
+ if(answered){
+  if(recogOn){stopRecog();return;}
+  var r2=setupRecog();
+  if(r2){recogOn=true;try{r2.start();}catch(e){}
+   var vb=document.getElementById("voiceBtn");
+   if(vb){vb.classList.add("listening");vb.textContent="\uD83D\uDD35 Povedz: \u010eALEJ";}
+   document.getElementById("voiceStat").textContent="\uD83D\uDC42 Povedz \u201E\u010eALEJ\u201C pre nov\u00FA ot\u00E1zku";
+   window.dalejRecog=r2;
+  }
+  return;
+ }
  if(recogOn){stopRecog();return;}
  const recog=setupRecog();
  if(!recog){
@@ -2552,10 +2563,21 @@ function toggleVoiceInput(){
 }
 function stopRecog(){
  recogOn=false;
+ if(window.dalejRecog){try{window.dalejRecog.abort();}catch(e){}try{window.dalejRecog.stop();}catch(e){}window.dalejRecog=null;}
  const b=document.getElementById("voiceBtn");
  if(b){b.classList.remove("listening");b.textContent="🎤 Hovor!";}
 }
 function matchVoiceAnswer(spoken){
+ // Check for "ďalej" command when already answered
+ if(answered){
+  var _s=spoken.toLowerCase().trim();
+  if(_s.includes("alej")||_s.includes("dal")||_s.includes("nasled")||_s.includes("dals")||_s.includes("potom")||_s.includes("pokra")){
+   if(window.dalejRecog){try{window.dalejRecog.abort();}catch(e){}try{window.dalejRecog.stop();}catch(e){}}
+   stopRecog();
+   nextQ();
+   return;
+  }
+ }
  const q=questions[cur];
  // Normalize spoken text: remove common filler words, normalize numbers
  let s = spoken.toLowerCase().trim();
@@ -2722,6 +2744,10 @@ function getStage(n){let s=STAGES[0];for(const st of STAGES)if(n>=st.n)s=st;retu
 // ─── RENDER QUESTION ─────────────────────────────
 function renderQ(){
  answered=false;speaking=false;spkGen++;stopRecog();
+ // Clear "dalej" recognition
+ if(window.dalejRecog){try{window.dalejRecog.abort();}catch(e){}try{window.dalejRecog.stop();}catch(e){}window.dalejRecog=null;}
+ // Reset voice button text
+ var vb=document.getElementById("voiceBtn");if(vb){vb.textContent="\uD83C\uDFA4 Hovor!";vb.classList.remove("listening");}
  const q=questions[cur];
  document.getElementById("stageTxt").textContent=getStage(cur+1).lbl;
  document.getElementById("catTxt").innerHTML=CAT_LABELS[q.cat]||"";
@@ -2791,6 +2817,21 @@ function pickAnswer(btn,opt,isCorrect,q){
  }
  document.getElementById("score").textContent=score;
  document.getElementById("nextBtn").className="next-btn show";
+ // Auto-start voice input for "ďalej" command
+ setTimeout(function(){
+  if(recogOn)stopRecog();
+  setTimeout(function(){
+   var r2=setupRecog();
+   if(r2){
+    recogOn=true;
+    try{r2.start();}catch(e){}
+    var vb=document.getElementById("voiceBtn");
+    if(vb){vb.classList.add("listening");vb.textContent="\uD83D\uDD35 Povedz: ĎALEJ";}
+    document.getElementById("voiceStat").textContent="\uD83D\uDC42 Povedz \u201E\u010eALEJ\u201C pre \u010Fal\u0161iu ot\u00E1zku";
+    window.dalejRecog=r2;
+   }
+  },100);
+ },600);
 }
 
 
@@ -2945,9 +2986,10 @@ function createYTPlayer(){
   musicYTPlayer=new YT.Player("ytPlayer",{
    height:"1",width:"1",
    playerVars:{
-    autoplay:0,controls:0,disablekb:1,enablejsapi:1,
+    controls:0,disablekb:1,enablejsapi:1,
     fs:0,iv_load_policy:3,modestbranding:1,
-    playsinline:1,rel:0,showinfo:0
+    playsinline:1,rel:0,showinfo:0,
+    autoplay:1,mute:1
    },
    events:{
     onReady:function(){if(musicOn)playSong(0);},
@@ -3045,8 +3087,8 @@ function startKviz(){
  var ml=document.getElementById("musicVolLabel");if(ml)ml.textContent="20%";
  var mb=document.getElementById("musicBtn");if(mb){mb.textContent="\uD83C\uDFB5 Hudba: ZAP";mb.classList.remove("off");}
  }catch(e){}
- // Start ambient music (handles autoplay internally)
- setTimeout(function(){initMusic();},200);
+ // Start ambient music immediately
+ initMusic();
  // Hide loading and render quiz
  var ld=document.getElementById("initLoading");if(ld)ld.style.display="none";
  try{
@@ -3079,6 +3121,7 @@ if(document.readyState==="loading"){
     if(window.musicOn&&window.musicYTPlayer.getPlayerState){
      var st=window.musicYTPlayer.getPlayerState();
      if(st===2||st===-1||st===5)window.musicYTPlayer.playVideo();
+     try{window.musicYTPlayer.unMute();window.musicYTPlayer.setVolume(Math.round(window.musicVol*100));}catch(e2){}
     }
    }catch(e){}
   }
