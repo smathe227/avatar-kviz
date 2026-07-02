@@ -2920,6 +2920,16 @@ function initMusic(){
   const AC=window.AudioContext||window.webkitAudioContext;
   if(!AC) return;
   musicCtx=new AC();
+  // Resume on first user interaction (autoplay policy)
+  function resumeAudio(){
+   if(musicCtx&&musicCtx.state==="suspended")musicCtx.resume();
+  }
+  document.addEventListener("click",resumeAudio,{once:true});
+  document.addEventListener("touchstart",resumeAudio,{once:true});
+  document.addEventListener("keydown",resumeAudio,{once:true});
+  // Also try to resume immediately (works if user already interacted)
+  if(musicCtx.state==="suspended")musicCtx.resume();
+  
   musicGain=musicCtx.createGain();
   musicGain.gain.value=musicVol;
   musicGain.connect(musicCtx.destination);
