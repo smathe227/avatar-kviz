@@ -3039,24 +3039,30 @@ function showInstallUrl(){
 try{if(speechSynthesis&&speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=()=>{}}catch(e){};
 function startKviz(){
  showInstallUrl();
- // Init volume slider
+ // Start quiz after short delay (allows DOM to settle)
+ setTimeout(function(){
+ // Init music UI
+ musicVol=0.2;
+ try{
  var mv=document.getElementById("musicVol");if(mv)mv.value=20;
  var ml=document.getElementById("musicVolLabel");if(ml)ml.textContent="20%";
- musicVol=0.2;
- // Start ambient music (will enable after first user tap)
- setTimeout(function(){initMusic();},500);
- const ld = document.getElementById("initLoading"); if(ld) ld.style.display="none"; document.getElementById("qTot").textContent=30;
- setTimeout(function(){
+ var mb=document.getElementById("musicBtn");if(mb){mb.textContent="\uD83C\uDFB5 Hudba: ZAP";mb.classList.remove("off");}
+ }catch(e){}
+ // Start ambient music (handles autoplay internally)
+ setTimeout(function(){initMusic();},200);
+ // Hide loading and render quiz
+ var ld=document.getElementById("initLoading");if(ld)ld.style.display="none";
  try{
- const cleanQ = QUESTIONS.filter(q=>q!==undefined&&q!==null);
+ document.getElementById("qTot").textContent=30;
+ var cleanQ = QUESTIONS.filter(function(q){return q!==undefined&&q!==null});
  buildPuzzle(AVATAR_IMAGES[imgIdx]);
  questions = pickQuestions();
  updBar();renderQ();
  }catch(e){
- document.getElementById("qText").textContent="😵 Niečo sa pokazilo... Prosím obnov stránku.";
+ var qt=document.getElementById("qText");if(qt)qt.textContent="\uD83D\uDE35 Nieco sa pokazilo... Prosim obnov stranku.";
  console.error("Init error:",e);
  }
- },300);
+ },50);
 }
 // Start quiz when DOM is ready (no need to wait for images/fonts)
 if(document.readyState==="loading"){
