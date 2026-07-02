@@ -2997,19 +2997,21 @@ function initMusic(){
   }
   setTimeout(scheduleNotes,3000);
   musicOn=true;
-  updateMusicBtn();
- }catch(e){console.log("Music init:",e);}
+  if(musicCtx)updateMusicBtn();
+ }catch(e){console.log("Music init:",e);updateMusicBtn();}
 }
 
 function toggleMusic(){
  musicOn=!musicOn;
  if(musicOn){
+  // Resume AudioContext on user click (required by autoplay policy)
+  if(musicCtx&&musicCtx.state==="suspended")musicCtx.resume();
+  if(!musicCtx)initMusic();
   if(musicGain) musicGain.gain.value=musicVol;
-  updateMusicBtn();
  } else {
   if(musicGain) musicGain.gain.value=0;
-  updateMusicBtn();
  }
+ updateMusicBtn();
 }
 function setMusicVol(v){
  musicVol=parseInt(v)/100;
@@ -3017,15 +3019,15 @@ function setMusicVol(v){
  document.getElementById("musicVolLabel").textContent=v+"%";
 }
 function updateMusicBtn(){
- const b=document.getElementById("musicBtn");
- if(!b) return;
+ var b=document.getElementById("musicBtn");if(!b)return;
  if(musicOn && musicCtx){
-  b.textContent="\uD83C\uDFB5 Hudba: ZAP";
-  b.classList.remove("off");
+  b.textContent="\uD83C\uDFB5 Hudba: ZAP";b.classList.remove("off");
  } else {
-  b.textContent="\uD83D\uDD07 Hudba: VYP";
-  b.classList.add("off");
+  b.textContent="\uD83D\uDD07 Hudba: VYP";b.classList.add("off");
  }
+ // Sync volume slider
+ var mv=document.getElementById("musicVol");if(mv)mv.value=Math.round(musicVol*100);
+ var ml=document.getElementById("musicVolLabel");if(ml)ml.textContent=Math.round(musicVol*100)+"%";
 }
 
 function showInstallUrl(){
@@ -3037,9 +3039,14 @@ function showInstallUrl(){
 try{if(speechSynthesis&&speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=()=>{}}catch(e){};
 function startKviz(){
  showInstallUrl();
- setTimeout(()=>{initMusic();},500);
+ // Init volume slider
+ var mv=document.getElementById("musicVol");if(mv)mv.value=20;
+ var ml=document.getElementById("musicVolLabel");if(ml)ml.textContent="20%";
+ musicVol=0.2;
+ // Start ambient music (will enable after first user tap)
+ setTimeout(function(){initMusic();},500);
  const ld = document.getElementById("initLoading"); if(ld) ld.style.display="none"; document.getElementById("qTot").textContent=30;
- setTimeout(()=>{
+ setTimeout(function(){
  try{
  const cleanQ = QUESTIONS.filter(q=>q!==undefined&&q!==null);
  buildPuzzle(AVATAR_IMAGES[imgIdx]);
@@ -3061,6 +3068,18 @@ if(document.readyState==="loading"){
 
 
 <script>
+// Resume any suspended AudioContext on first user interaction
+(function(){
+ function resumeAllAudio(){
+  if(window.musicCtx && window.musicCtx.state==='suspended'){
+   window.musicCtx.resume();
+  }
+ }
+ document.addEventListener('click',resumeAllAudio,{once:true});
+ document.addEventListener('touchstart',resumeAllAudio,{once:true});
+ document.addEventListener('keydown',resumeAllAudio,{once:true});
+})();
+
 // Register service worker for PWA
 if('serviceWorker' in navigator){
  navigator.serviceWorker.register('sw.js')
