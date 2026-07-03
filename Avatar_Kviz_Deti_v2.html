@@ -11,7 +11,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
-<title>Avatar Kvíz pre deti 🌟</title>
+<meta name="rev" content="5"><title>Avatar Kvíz pre deti 🌟</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap">
@@ -67,6 +67,7 @@ body{
 .btn-repeat{background:linear-gradient(135deg,#22c55e,#16a34a)}
 .btn-reset{background:linear-gradient(135deg,#fb923c,#f97316);color:#0f172a}
 .btn-end{background:linear-gradient(135deg,#f97316,#ef4444)}
+.btn-skip{background:linear-gradient(135deg,#fbbf24,#eab308);color:#0f172a}
 
 
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 10px rgba(239,68,68,0)}}
@@ -287,12 +288,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 </head>
-<body><iframe id="ytPlayer" width="1" height="1"
- src="https://www.youtube.com/embed/uDfj5P7cVBE?autoplay=1&mute=1&loop=1&playlist=uVclAKPJSqs,lKbLNqFK_58,0VY_L-HYK_A,HLeMF5Y7MJU,DkJE7QNaioU&controls=0&disablekb=1&playsinline=1&modestbranding=1&enablejsapi=1&rel=0&fs=0&iv_load_policy=3&showinfo=0"
- allow="autoplay"
- style="position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0.01;border:none;z-index:9999"
- title="Avatar hudba">
-</iframe>
+<body>
+<!-- YouTube player -->
+<div id="ytPlayerWrap" style="position:fixed;bottom:-100px;right:10px;width:200px;height:113px;border-radius:8px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.5);z-index:9999;transition:bottom 0.3s;opacity:0.8" 
+     onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.8'">
+ <div id="ytPlayer"></div>
+</div>
 
 <div id="initLoading" style="text-align:center;padding:20px;font-size:1.2rem;color:#fbbf24;font-weight:bold">⏳ Načítavam kvíz…</div>
 
@@ -318,6 +319,7 @@ document.addEventListener("DOMContentLoaded", function() {
  <button class="btn btn-music" id="musicBtn" onclick="toggleMusic()">🎵 Hudba: ZAP</button>
  <button class="btn btn-voice" id="voiceBtn" onclick="toggleVoiceInput()">🎤 Hovor!</button>
  <button class="btn btn-repeat" onclick="doRepeat()">🔁 Znova</button>
+ <button class="btn btn-skip" id="skipBtn" onclick="skipQuestion()">⏭️ Preskočiť</button>
  <button class="btn btn-reset" onclick="resetGame()">🔄 Reset</button>
  <button class="btn btn-end" onclick="endGame()">⏹ Koniec</button>
 </div>
@@ -328,6 +330,10 @@ document.addEventListener("DOMContentLoaded", function() {
  <label>🎵 Hudba:</label>
  <input type="range" id="musicVol" min="0" max="100" value="20" oninput="setMusicVol(this.value)">
  <span id="musicVolLabel" style="font-size:.75rem;color:#94a3b8">20%</span>
+</div>
+<div style="text-align:center;font-size:.72rem;color:#6b7280;margin-top:2px">
+ <span id="musicStatus">⏳ Načítavam hudbu…</span>
+ <button onclick="testAudio()" style="background:none;border:1px solid #4b5563;border-radius:999px;padding:1px 8px;font-size:.7rem;color:#9ca3af;cursor:pointer;margin-left:4px">🎵 Test</button>
 </div>
 
 <!-- SPEED -->
@@ -2428,6 +2434,8 @@ function numToSk(txt){
 }
 function audioText(txt){
  var r=txt;
+ // Remove leading "ku " prefix from answer text (TTS artifact fix)
+ r=r.replace(/^ku\s+/i,"");
  // Neytiri pronunciation fix - tvrdé 't'
  r=r.replace(/Neytiri/gi,"Neytyri");
  // Match jabĺčko/jabĺčka/jabĺčok with proper Slovak diacritics
@@ -2439,6 +2447,9 @@ function audioText(txt){
  if(n>=2&&n<=4)return w+" jabĺčka";
  return w+" jabĺčok";
  }
+ // Fix "máš jeden jabĺčko" -> "máš jedno jabĺčko"
+ r=r.replace(/jeden jabĺčko/gi,"jedno jabĺčko");
+ r=r.replace(/jeden jabličko/gi,"jedno jabĺčko");
  r=r.replace(/\b(\d+)\b/g,function(m0,d){return numToSk(d);});
  return r;
 }
@@ -2503,6 +2514,27 @@ function setSpd(r,el){
 }
 
 
+
+// ─── SKIP QUESTION ──────────────────────────────
+function skipQuestion(){
+ if(answered) return;
+ spkGen++;speechSynthesis.cancel();speaking=false;stopRecog();
+ var cat=questions[cur].cat;
+ var usedTxt=new Set(questions.map(function(q){return q.q;}));
+ // Find replacement from same category
+ var pool=QUESTIONS.filter(function(q){return q!==undefined&&q!==null&&q.cat===cat&&!usedTxt.has(q.q);});
+ if(pool.length===0){
+  // Fallback: any unused question
+  pool=QUESTIONS.filter(function(q){return q!==undefined&&q!==null&&!usedTxt.has(q.q);});
+  if(pool.length===0){
+   document.getElementById("voiceStat").textContent="🙁 Niet náhradnej otázky.";
+   return;
+  }
+ }
+ questions[cur]=pool[Math.floor(Math.random()*pool.length)];
+ renderQ();
+}
+
 // ─── VOICE INPUT ─────────────────────────────────
 let recogOn=false;
 function setupRecog(){
@@ -2559,10 +2591,55 @@ function toggleVoiceInput(){
 }
 function stopRecog(){
  recogOn=false;
+ stopNextListen();
  const b=document.getElementById("voiceBtn");
  if(b){b.classList.remove("listening");b.textContent="🎤 Hovor!";}
 }
+
+let nextListenRecog=null;
+function stopNextListen(){
+ if(nextListenRecog){
+  try{nextListenRecog.abort();}catch(e){}
+  nextListenRecog=null;
+ }
+}
+function startListenNext(){
+ stopNextListen();
+ if(answered && cur < questions.length-1){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR) return;
+  try{
+   const r=new SR();
+   r.lang="sk-SK";r.continuous=false;r.interimResults=false;
+   r.onresult=function(e){
+    const txt=e.results[0][0].transcript.toLowerCase().trim();
+    if(txt.includes("ďalej")||txt.includes("dalej")||txt.includes("ďalšia")||txt.includes("dalsia")||txt.includes("ďalšiu")||txt.includes("dalsiu")||txt.includes("preskočiť")||txt.includes("preskoc")||txt.includes("skip")||txt.includes("neviem")){
+     stopNextListen();
+     nextQ();
+    }
+   };
+   r.onend=function(){
+    if(nextListenRecog===r){
+     // Restart listening if still on the same question
+     setTimeout(function(){
+      if(nextListenRecog===r && answered && cur < questions.length-1){
+       try{nextListenRecog.start();}catch(e){}
+      }
+     }, 500);
+    }
+   };
+   nextListenRecog=r;
+   try{r.start();}catch(e){nextListenRecog=null;}
+  }catch(e){}
+ }
+}
 function matchVoiceAnswer(spoken){
+ // Check for skip command first
+ var sc=spoken.toLowerCase().trim();
+ if(sc.includes("preskočiť")||sc.includes("preskoc")||sc.includes("skip")||sc.includes("nahrad")||sc.includes("iná")||sc.includes("ina")||sc.includes("tazke")||sc.includes("neviem")||sc.includes("nechcem")){
+  skipQuestion();
+  return;
+ }
  const q=questions[cur];
  // Normalize spoken text: remove common filler words, normalize numbers
  let s = spoken.toLowerCase().trim();
@@ -2729,6 +2806,7 @@ function getStage(n){let s=STAGES[0];for(const st of STAGES)if(n>=st.n)s=st;retu
 // ─── RENDER QUESTION ─────────────────────────────
 function renderQ(){
  answered=false;speaking=false;spkGen++;stopRecog();
+ var sb=document.getElementById("skipBtn");if(sb)sb.style.display="";
  const q=questions[cur];
  document.getElementById("stageTxt").textContent=getStage(cur+1).lbl;
  document.getElementById("catTxt").innerHTML=CAT_LABELS[q.cat]||"";
@@ -2798,6 +2876,9 @@ function pickAnswer(btn,opt,isCorrect,q){
  }
  document.getElementById("score").textContent=score;
  document.getElementById("nextBtn").className="next-btn show";
+ var sb=document.getElementById("skipBtn");if(sb)sb.style.display="none";
+ // Start voice listening for "Ďalej" command
+ setTimeout(startListenNext, 800);
 }
 
 
@@ -2897,7 +2978,8 @@ function showEnd(){
 // ─── RESET / END ─────────────────────────────────
 function resetGame(){
  spkGen++;speechSynthesis.cancel();speaking=false;stopRecog();
- if(!musicOn){musicOn=true;ytCmd("playVideo",[]);ytCmd("unMute",[]);updateMusicBtn();}
+ if(!musicOn){musicOn=true;if(window.YT_player){try{YT_player.playVideo();YT_player.unMute();YT_player.setVolume(Math.round(musicVol*100));}catch(e){}}updateMusicBtn();}
+ var ms=document.getElementById("musicStatus");if(ms)ms.textContent="🎵 Hrá";
  imgIdx=(imgIdx+1)%AVATAR_IMAGES.length;
  questions=pickQuestions();
  cur=0;score=0;corr=0;wrong=0;revd=0;wrongByQ=[];
@@ -2919,38 +3001,95 @@ var musicOn=true;
 var musicVol=0.2;
 
 // Send command to YouTube embed iframe via postMessage
-function ytCmd(func, args){
- var player=document.getElementById("ytPlayer");
- if(!player||!player.contentWindow)return;
- try{
-  player.contentWindow.postMessage(JSON.stringify({
-   event:"command",func:func,args:args||[]
-  }),"*");
- }catch(e){}
-}
+var YT_player=null;
+var YT_ready=false;
+var YT_song_idx=0;
 
 function initMusic(){
- // Try to init the player with retries
- var tries=0;
- function tryInit(){
-  tries++;
-  ytCmd("setVolume",[Math.round(musicVol*100)]);
-  ytCmd("unMute",[]);
-  ytCmd("playVideo",[]);
-  if(tries<5)setTimeout(tryInit,800);
+ var tag=document.createElement("script");
+ tag.src="https://www.youtube.com/iframe_api";
+ tag.onload=function(){
+  if(typeof YT!=='undefined'&&YT.loaded)tryCreatePlayer();
+ };
+ var first=document.getElementsByTagName("script")[0];
+ if(first&&first.parentNode)first.parentNode.insertBefore(tag,first);
+ else document.head.appendChild(tag);
+ // Fallback if API doesn't load within 5s
+ setTimeout(function(){
+  if(!YT_ready)tryDirectEmbed();
+ },5000);
+}
+
+function onYouTubeIframeAPIReady(){
+ YT_ready=true;
+ tryCreatePlayer();
+}
+
+function tryCreatePlayer(){
+ if(YT_player)return;
+ var div=document.getElementById("ytPlayer");
+ if(!div){
+  div=document.createElement("div");
+  div.id="ytPlayer";
+  document.getElementById("ytPlayerWrap").appendChild(div);
  }
- setTimeout(tryInit,500);
- setTimeout(function(){updateMusicBtn();},1500);
+ try{
+  YT_player=new YT.Player("ytPlayer",{
+   height:"113",width:"200",
+   videoId:"-kOBwBhuMQg",
+   playerVars:{
+    controls:0,disablekb:1,enablejsapi:1,
+    fs:0,iv_load_policy:3,modestbranding:1,
+    playsinline:1,rel:0,showinfo:0,
+    autoplay:1,mute:1,origin:location.origin
+   },
+   events:{
+    onReady:function(){
+     if(musicOn){YT_player.setVolume(Math.round(musicVol*100));YT_player.unMute();YT_player.playVideo();}
+     var ms=document.getElementById("musicStatus");
+     if(ms)ms.textContent=musicOn?"🎵 Hrá":"🔇 Stop";
+     updateMusicBtn();
+    },
+    onStateChange:function(e){
+     if(e.data===YT.PlayerState.ENDED){
+      YT_song_idx=(YT_song_idx+1)%6;
+ var ids=["-kOBwBhuMQg","03izegf1niI","FszG3BVsDio","3cmpTIH0qlQ","Jm8jVP16Oi8","5LajYfAxrKE"];
+ YT_player.loadVideoById({videoId:ids[YT_song_idx],suggestedQuality:"small"});
+     }
+    },
+    onError:function(e){
+     console.warn("YT error:",e);
+     var ms=document.getElementById("musicStatus");
+     if(ms)ms.textContent="❌ Chyba: "+e;
+    }
+   }
+  });
+ }catch(e){
+  console.warn("YT create error:",e);
+  tryDirectEmbed();
+ }
+}
+
+function tryDirectEmbed(){
+ if(YT_player)return;
+ var w=document.getElementById("ytPlayerWrap");
+ if(!w)return;
+ w.innerHTML='<iframe id="ytPlayer" width="200" height="113" src="https://www.youtube.com/embed/-kOBwBhuMQg?autoplay=1&mute=1&loop=1&playlist=03izegf1niI,FszG3BVsDio,3cmpTIH0qlQ,Jm8jVP16Oi8,5LajYfAxrKE&controls=0&playsinline=1&modestbranding=1&rel=0" allow="autoplay" style="width:200px;height:113px;border:none" title="Hudba"></iframe>';
+ setTimeout(function(){
+  var ms=document.getElementById("musicStatus");
+  if(ms)ms.textContent=musicOn?"🎵 Hrá":"🔇 Stop";
+  updateMusicBtn();
+ },3000);
 }
 
 function toggleMusic(){
  musicOn=!musicOn;
- if(musicOn){
-  ytCmd("playVideo",[]);
-  ytCmd("unMute",[]);
-  ytCmd("setVolume",[Math.round(musicVol*100)]);
+ var ms=document.getElementById("musicStatus");
+ if(YT_player){
+  if(musicOn){YT_player.playVideo();YT_player.unMute();YT_player.setVolume(Math.round(musicVol*100));if(ms)ms.textContent="🎵 Hrá";}
+  else{YT_player.pauseVideo();if(ms)ms.textContent="🔇 Stop";}
  } else {
-  ytCmd("pauseVideo",[]);
+  if(ms)ms.textContent=musicOn?"🎵 Hrá":"🔇 Stop";
  }
  updateMusicBtn();
 }
@@ -2959,19 +3098,36 @@ function setMusicVol(v){
  musicVol=parseInt(v)/100;
  var ml=document.getElementById("musicVolLabel");
  if(ml)ml.textContent=v+"%";
- ytCmd("setVolume",[Math.round(musicVol*100)]);
+ if(YT_player){try{YT_player.setVolume(Math.round(musicVol*100));}catch(e){}}
 }
 
 function updateMusicBtn(){
  var b=document.getElementById("musicBtn");if(!b)return;
  if(musicOn){
-  b.textContent="\U0001F3B5 Hudba: ZAP";b.classList.remove("off");
+  b.textContent="🎵 Hudba: ZAP";b.classList.remove("off");
  } else {
-  b.textContent="\U0001F507 Hudba: VYP";b.classList.add("off");
+  b.textContent="🔇 Hudba: VYP";b.classList.add("off");
  }
  var mv=document.getElementById("musicVol");if(mv)mv.value=Math.round(musicVol*100);
  var ml=document.getElementById("musicVolLabel");if(ml)ml.textContent=Math.round(musicVol*100)+"%";
 }
+
+function testAudio(){
+ var ms=document.getElementById("musicStatus");
+ if(YT_player){
+  if(ms)ms.textContent="🎵 Testujem…";
+  YT_player.unMute();
+  YT_player.playVideo();
+  YT_player.setVolume(70);
+  setTimeout(function(){
+   YT_player.setVolume(Math.round(musicVol*100));
+   if(ms)ms.textContent="🎵 Test OK";
+  },2000);
+ } else {
+  if(ms)ms.textContent="⏳ Hráč sa nenačítal…";
+ }
+}
+
 function showInstallUrl(){
  const el=document.getElementById("installUrl");
  if(el) el.textContent=location.href;
@@ -2988,7 +3144,7 @@ function startKviz(){
  try{
  var mv=document.getElementById("musicVol");if(mv)mv.value=20;
  var ml=document.getElementById("musicVolLabel");if(ml)ml.textContent="20%";
- var mb=document.getElementById("musicBtn");if(mb){mb.textContent="\uD83C\uDFB5 Hudba: ZAP";mb.classList.remove("off");}
+ var mb=document.getElementById("musicBtn");if(mb){mb.textContent="🎵 Hudba: ZAP";mb.classList.remove("off");}
  }catch(e){}
  // Start ambient music immediately
  initMusic();
@@ -3019,10 +3175,21 @@ if(document.readyState==="loading"){
 // Resume YouTube player on first user interaction (unmute and play)
 (function(){
  function resumeYT(){
-  if(window.musicOn&&typeof ytCmd==='function'){
-   ytCmd("unMute",[]);
-   ytCmd("playVideo",[]);
-   ytCmd("setVolume",[Math.round(window.musicVol*100)]);
+  if(window.musicOn&&window.YT_player){
+   try{
+    window.YT_player.unMute();
+    window.YT_player.playVideo();
+    window.YT_player.setVolume(Math.round(window.musicVol*100));
+    var ms=document.getElementById("musicStatus");
+    if(ms)ms.textContent="🎵 Hrá";
+   }catch(e){}
+  } else if(window.musicOn){
+   // Try direct embed play
+   var ifr=document.getElementById("ytPlayer");
+   if(ifr&&ifr.contentWindow){
+    try{ifr.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}',"*");}catch(e2){}
+    try{ifr.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}',"*");}catch(e2){}
+   }
   }
  }
  document.addEventListener('click',resumeYT,{once:true});
