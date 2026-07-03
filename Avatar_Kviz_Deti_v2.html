@@ -287,10 +287,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 </head>
-<body><iframe id="ytPlayer" width="640" height="390"
+<body><iframe id="ytPlayer" width="1" height="1"
  src="https://www.youtube.com/embed/uDfj5P7cVBE?autoplay=1&mute=1&loop=1&playlist=uVclAKPJSqs,lKbLNqFK_58,0VY_L-HYK_A,HLeMF5Y7MJU,DkJE7QNaioU&controls=0&disablekb=1&playsinline=1&modestbranding=1&enablejsapi=1&rel=0&fs=0&iv_load_policy=3&showinfo=0"
  allow="autoplay"
- style="position:fixed;left:-9999px;top:0;width:640px;height:390px;opacity:0;pointer-events:none;border:none;z-index:-1"
+ style="position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0.01;border:none;z-index:9999"
  title="Avatar hudba">
 </iframe>
 
@@ -2930,13 +2930,17 @@ function ytCmd(func, args){
 }
 
 function initMusic(){
- // The iframe is already in HTML with autoplay=1&mute=1
- // Set volume after a short delay
- setTimeout(function(){
+ // Try to init the player with retries
+ var tries=0;
+ function tryInit(){
+  tries++;
   ytCmd("setVolume",[Math.round(musicVol*100)]);
-  if(musicOn){ytCmd("unMute",[]);ytCmd("playVideo",[]);}
-  updateMusicBtn();
- },1000);
+  ytCmd("unMute",[]);
+  ytCmd("playVideo",[]);
+  if(tries<5)setTimeout(tryInit,800);
+ }
+ setTimeout(tryInit,500);
+ setTimeout(function(){updateMusicBtn();},1500);
 }
 
 function toggleMusic(){
