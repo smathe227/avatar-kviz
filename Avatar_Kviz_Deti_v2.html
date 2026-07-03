@@ -2432,6 +2432,8 @@ function numToSk(txt){
 }
 function audioText(txt){
  var r=txt;
+ // Remove leading "ku " prefix from answer text (TTS artifact fix)
+ r=r.replace(/^ku\s+/i,"");
  // Neytiri pronunciation fix - tvrdé 't'
  r=r.replace(/Neytiri/gi,"Neytyri");
  // Match jabĺčko/jabĺčka/jabĺčok with proper Slovak diacritics
@@ -2443,6 +2445,9 @@ function audioText(txt){
  if(n>=2&&n<=4)return w+" jabĺčka";
  return w+" jabĺčok";
  }
+ // Fix "máš jeden jabĺčko" -> "máš jedno jabĺčko"
+ r=r.replace(/jeden jabĺčko/gi,"jedno jabĺčko");
+ r=r.replace(/jeden jabličko/gi,"jedno jabĺčko");
  r=r.replace(/\b(\d+)\b/g,function(m0,d){return numToSk(d);});
  return r;
 }
@@ -2959,7 +2964,7 @@ function tryCreatePlayer(){
  try{
   YT_player=new YT.Player("ytPlayer",{
    height:"113",width:"200",
-   videoId:"uDfj5P7cVBE",
+   videoId:"-kOBwBhuMQg",
    playerVars:{
     controls:0,disablekb:1,enablejsapi:1,
     fs:0,iv_load_policy:3,modestbranding:1,
@@ -2976,7 +2981,7 @@ function tryCreatePlayer(){
     onStateChange:function(e){
      if(e.data===YT.PlayerState.ENDED){
       YT_song_idx=(YT_song_idx+1)%6;
- var ids=["uDfj5P7cVBE","uVclAKPJSqs","lKbLNqFK_58","0VY_L-HYK_A","HLeMF5Y7MJU","DkJE7QNaioU"];
+ var ids=["-kOBwBhuMQg","03izegf1niI","FszG3BVsDio","3cmpTIH0qlQ","Jm8jVP16Oi8","5LajYfAxrKE"];
  YT_player.loadVideoById({videoId:ids[YT_song_idx],suggestedQuality:"small"});
      }
     },
@@ -2997,7 +3002,7 @@ function tryDirectEmbed(){
  if(YT_player)return;
  var w=document.getElementById("ytPlayerWrap");
  if(!w)return;
- w.innerHTML='<iframe id="ytPlayer" width="200" height="113" src="https://www.youtube.com/embed/uDfj5P7cVBE?autoplay=1&mute=1&loop=1&playlist=uVclAKPJSqs,lKbLNqFK_58,0VY_L-HYK_A,HLeMF5Y7MJU,DkJE7QNaioU&controls=0&playsinline=1&modestbranding=1&rel=0" allow="autoplay" style="width:200px;height:113px;border:none" title="Hudba"></iframe>';
+ w.innerHTML='<iframe id="ytPlayer" width="200" height="113" src="https://www.youtube.com/embed/-kOBwBhuMQg?autoplay=1&mute=1&loop=1&playlist=03izegf1niI,FszG3BVsDio,3cmpTIH0qlQ,Jm8jVP16Oi8,5LajYfAxrKE&controls=0&playsinline=1&modestbranding=1&rel=0" allow="autoplay" style="width:200px;height:113px;border:none" title="Hudba"></iframe>';
  setTimeout(function(){
   var ms=document.getElementById("musicStatus");
   if(ms)ms.textContent=musicOn?"🎵 Hrá":"🔇 Stop";
@@ -3051,38 +3056,6 @@ function testAudio(){
  }
 }
 
-function toggleMusic(){
- musicOn=!musicOn;
- var ms=document.getElementById("musicStatus");
- if(musicOn){
-  ytCmd("playVideo");
-  ytCmd("unMute");
-  ytCmd("setVolume",Math.round(musicVol*100));
-  if(ms)ms.textContent="🎵 Hrá";
- } else {
-  ytCmd("pauseVideo");
-  if(ms)ms.textContent="🔇 Stop";
- }
- updateMusicBtn();
-}
-
-function setMusicVol(v){
- musicVol=parseInt(v)/100;
- var ml=document.getElementById("musicVolLabel");
- if(ml)ml.textContent=v+"%";
- ytCmd("setVolume",Math.round(musicVol*100));
-}
-
-function updateMusicBtn(){
- var b=document.getElementById("musicBtn");if(!b)return;
- if(musicOn){
-  b.textContent="🎵 Hudba: ZAP";b.classList.remove("off");
- } else {
-  b.textContent="🔇 Hudba: VYP";b.classList.add("off");
- }
- var mv=document.getElementById("musicVol");if(mv)mv.value=Math.round(musicVol*100);
- var ml=document.getElementById("musicVolLabel");if(ml)ml.textContent=Math.round(musicVol*100)+"%";
-}
 function showInstallUrl(){
  const el=document.getElementById("installUrl");
  if(el) el.textContent=location.href;
@@ -3099,7 +3072,7 @@ function startKviz(){
  try{
  var mv=document.getElementById("musicVol");if(mv)mv.value=20;
  var ml=document.getElementById("musicVolLabel");if(ml)ml.textContent="20%";
- var mb=document.getElementById("musicBtn");if(mb){mb.textContent="\uD83C\uDFB5 Hudba: ZAP";mb.classList.remove("off");}
+ var mb=document.getElementById("musicBtn");if(mb){mb.textContent="🎵 Hudba: ZAP";mb.classList.remove("off");}
  }catch(e){}
  // Start ambient music immediately
  initMusic();
