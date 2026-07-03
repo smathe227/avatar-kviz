@@ -2568,8 +2568,47 @@ function toggleVoiceInput(){
 }
 function stopRecog(){
  recogOn=false;
+ stopNextListen();
  const b=document.getElementById("voiceBtn");
  if(b){b.classList.remove("listening");b.textContent="🎤 Hovor!";}
+}
+
+let nextListenRecog=null;
+function stopNextListen(){
+ if(nextListenRecog){
+  try{nextListenRecog.abort();}catch(e){}
+  nextListenRecog=null;
+ }
+}
+function startListenNext(){
+ stopNextListen();
+ if(answered && cur < questions.length-1){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR) return;
+  try{
+   const r=new SR();
+   r.lang="sk-SK";r.continuous=false;r.interimResults=false;
+   r.onresult=function(e){
+    const txt=e.results[0][0].transcript.toLowerCase().trim();
+    if(txt.includes("ďalej")||txt.includes("dalej")||txt.includes("ďalšia")||txt.includes("dalsia")||txt.includes("ďalšiu")||txt.includes("dalsiu")){
+     stopNextListen();
+     nextQ();
+    }
+   };
+   r.onend=function(){
+    if(nextListenRecog===r){
+     // Restart listening if still on the same question
+     setTimeout(function(){
+      if(nextListenRecog===r && answered && cur < questions.length-1){
+       try{nextListenRecog.start();}catch(e){}
+      }
+     }, 500);
+    }
+   };
+   nextListenRecog=r;
+   try{r.start();}catch(e){nextListenRecog=null;}
+  }catch(e){}
+ }
 }
 function matchVoiceAnswer(spoken){
  const q=questions[cur];
@@ -2807,6 +2846,8 @@ function pickAnswer(btn,opt,isCorrect,q){
  }
  document.getElementById("score").textContent=score;
  document.getElementById("nextBtn").className="next-btn show";
+ // Start voice listening for "Ďalej" command
+ setTimeout(startListenNext, 800);
 }
 
 
