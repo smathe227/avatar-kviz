@@ -290,7 +290,7 @@ document.addEventListener("DOMContentLoaded", function() {
 <body><iframe id="ytPlayer" width="1" height="1"
  src="https://www.youtube.com/embed/uDfj5P7cVBE?autoplay=1&mute=1&loop=1&playlist=uVclAKPJSqs,lKbLNqFK_58,0VY_L-HYK_A,HLeMF5Y7MJU,DkJE7QNaioU&controls=0&disablekb=1&playsinline=1&modestbranding=1&enablejsapi=1&rel=0&fs=0&iv_load_policy=3&showinfo=0"
  allow="autoplay"
- style="position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0.01;border:none;z-index:9999"
+ style="position:fixed;bottom:0;right:0;width:10px;height:10px;opacity:0.01;border:none;z-index:9999"
  title="Avatar hudba">
 </iframe>
 
@@ -2897,7 +2897,7 @@ function showEnd(){
 // ─── RESET / END ─────────────────────────────────
 function resetGame(){
  spkGen++;speechSynthesis.cancel();speaking=false;stopRecog();
- if(!musicOn){musicOn=true;ytCmd("playVideo",[]);ytCmd("unMute",[]);updateMusicBtn();}
+ if(!musicOn){musicOn=true;ytCmd("playVideo");ytCmd("unMute");updateMusicBtn();}
  imgIdx=(imgIdx+1)%AVATAR_IMAGES.length;
  questions=pickQuestions();
  cur=0;score=0;corr=0;wrong=0;revd=0;wrongByQ=[];
@@ -2919,12 +2919,13 @@ var musicOn=true;
 var musicVol=0.2;
 
 // Send command to YouTube embed iframe via postMessage
-function ytCmd(func, args){
+function ytCmd(func, val){
  var player=document.getElementById("ytPlayer");
  if(!player||!player.contentWindow)return;
  try{
+  var args = (val!==undefined && val!==null) ? String(val) : "";
   player.contentWindow.postMessage(JSON.stringify({
-   event:"command",func:func,args:args||[]
+   event:"command",func:func,args:args
   }),"*");
  }catch(e){}
 }
@@ -2934,9 +2935,9 @@ function initMusic(){
  var tries=0;
  function tryInit(){
   tries++;
-  ytCmd("setVolume",[Math.round(musicVol*100)]);
-  ytCmd("unMute",[]);
-  ytCmd("playVideo",[]);
+  ytCmd("setVolume",Math.round(musicVol*100));
+  ytCmd("unMute");
+  ytCmd("playVideo");
   if(tries<5)setTimeout(tryInit,800);
  }
  setTimeout(tryInit,500);
@@ -2946,11 +2947,11 @@ function initMusic(){
 function toggleMusic(){
  musicOn=!musicOn;
  if(musicOn){
-  ytCmd("playVideo",[]);
-  ytCmd("unMute",[]);
-  ytCmd("setVolume",[Math.round(musicVol*100)]);
+  ytCmd("playVideo");
+  ytCmd("unMute");
+  ytCmd("setVolume",Math.round(musicVol*100));
  } else {
-  ytCmd("pauseVideo",[]);
+  ytCmd("pauseVideo");
  }
  updateMusicBtn();
 }
@@ -2959,15 +2960,15 @@ function setMusicVol(v){
  musicVol=parseInt(v)/100;
  var ml=document.getElementById("musicVolLabel");
  if(ml)ml.textContent=v+"%";
- ytCmd("setVolume",[Math.round(musicVol*100)]);
+ ytCmd("setVolume",Math.round(musicVol*100));
 }
 
 function updateMusicBtn(){
  var b=document.getElementById("musicBtn");if(!b)return;
  if(musicOn){
-  b.textContent="\U0001F3B5 Hudba: ZAP";b.classList.remove("off");
+  b.textContent="🎵 Hudba: ZAP";b.classList.remove("off");
  } else {
-  b.textContent="\U0001F507 Hudba: VYP";b.classList.add("off");
+  b.textContent="🔇 Hudba: VYP";b.classList.add("off");
  }
  var mv=document.getElementById("musicVol");if(mv)mv.value=Math.round(musicVol*100);
  var ml=document.getElementById("musicVolLabel");if(ml)ml.textContent=Math.round(musicVol*100)+"%";
@@ -3020,9 +3021,9 @@ if(document.readyState==="loading"){
 (function(){
  function resumeYT(){
   if(window.musicOn&&typeof ytCmd==='function'){
-   ytCmd("unMute",[]);
-   ytCmd("playVideo",[]);
-   ytCmd("setVolume",[Math.round(window.musicVol*100)]);
+   ytCmd("unMute");
+   ytCmd("playVideo");
+   ytCmd("setVolume",Math.round(window.musicVol*100));
   }
  }
  document.addEventListener('click',resumeYT,{once:true});
