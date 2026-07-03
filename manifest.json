@@ -1,0 +1,37 @@
+{
+  "name": "Avatar Kvíz pre deti 🌟",
+  "short_name": "Avatar Kvíz",
+  "description": "Zábavný kvíz o Avatar filme pre deti s 2000 otázkami",
+  "start_url": "Avatar_Kviz_Deti_v2.html",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "categories": ["education", "entertainment", "games"],
+  "lang": "sk",
+  "icons": [
+    {
+      "src": "icons/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
