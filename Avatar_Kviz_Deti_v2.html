@@ -67,6 +67,7 @@ body{
 .btn-repeat{background:linear-gradient(135deg,#22c55e,#16a34a)}
 .btn-reset{background:linear-gradient(135deg,#fb923c,#f97316);color:#0f172a}
 .btn-end{background:linear-gradient(135deg,#f97316,#ef4444)}
+.btn-skip{background:linear-gradient(135deg,#fbbf24,#eab308);color:#0f172a}
 
 
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 10px rgba(239,68,68,0)}}
@@ -318,6 +319,7 @@ document.addEventListener("DOMContentLoaded", function() {
  <button class="btn btn-music" id="musicBtn" onclick="toggleMusic()">🎵 Hudba: ZAP</button>
  <button class="btn btn-voice" id="voiceBtn" onclick="toggleVoiceInput()">🎤 Hovor!</button>
  <button class="btn btn-repeat" onclick="doRepeat()">🔁 Znova</button>
+ <button class="btn btn-skip" id="skipBtn" onclick="skipQuestion()">⏭️ Preskočiť</button>
  <button class="btn btn-reset" onclick="resetGame()">🔄 Reset</button>
  <button class="btn btn-end" onclick="endGame()">⏹ Koniec</button>
 </div>
@@ -2512,6 +2514,27 @@ function setSpd(r,el){
 }
 
 
+
+// ─── SKIP QUESTION ──────────────────────────────
+function skipQuestion(){
+ if(answered) return;
+ spkGen++;speechSynthesis.cancel();speaking=false;stopRecog();
+ var cat=questions[cur].cat;
+ var usedTxt=new Set(questions.map(function(q){return q.q;}));
+ // Find replacement from same category
+ var pool=QUESTIONS.filter(function(q){return q!==undefined&&q!==null&&q.cat===cat&&!usedTxt.has(q.q);});
+ if(pool.length===0){
+  // Fallback: any unused question
+  pool=QUESTIONS.filter(function(q){return q!==undefined&&q!==null&&!usedTxt.has(q.q);});
+  if(pool.length===0){
+   document.getElementById("voiceStat").textContent="🙁 Niet náhradnej otázky.";
+   return;
+  }
+ }
+ questions[cur]=pool[Math.floor(Math.random()*pool.length)];
+ renderQ();
+}
+
 // ─── VOICE INPUT ─────────────────────────────────
 let recogOn=false;
 function setupRecog(){
@@ -2590,7 +2613,7 @@ function startListenNext(){
    r.lang="sk-SK";r.continuous=false;r.interimResults=false;
    r.onresult=function(e){
     const txt=e.results[0][0].transcript.toLowerCase().trim();
-    if(txt.includes("ďalej")||txt.includes("dalej")||txt.includes("ďalšia")||txt.includes("dalsia")||txt.includes("ďalšiu")||txt.includes("dalsiu")){
+    if(txt.includes("ďalej")||txt.includes("dalej")||txt.includes("ďalšia")||txt.includes("dalsia")||txt.includes("ďalšiu")||txt.includes("dalsiu")||txt.includes("preskočiť")||txt.includes("preskoc")||txt.includes("skip")||txt.includes("neviem")){
      stopNextListen();
      nextQ();
     }
@@ -2611,6 +2634,12 @@ function startListenNext(){
  }
 }
 function matchVoiceAnswer(spoken){
+ // Check for skip command first
+ var sc=spoken.toLowerCase().trim();
+ if(sc.includes("preskočiť")||sc.includes("preskoc")||sc.includes("skip")||sc.includes("nahrad")||sc.includes("iná")||sc.includes("ina")||sc.includes("tazke")||sc.includes("neviem")||sc.includes("nechcem")){
+  skipQuestion();
+  return;
+ }
  const q=questions[cur];
  // Normalize spoken text: remove common filler words, normalize numbers
  let s = spoken.toLowerCase().trim();
@@ -2777,6 +2806,7 @@ function getStage(n){let s=STAGES[0];for(const st of STAGES)if(n>=st.n)s=st;retu
 // ─── RENDER QUESTION ─────────────────────────────
 function renderQ(){
  answered=false;speaking=false;spkGen++;stopRecog();
+ var sb=document.getElementById("skipBtn");if(sb)sb.style.display="";
  const q=questions[cur];
  document.getElementById("stageTxt").textContent=getStage(cur+1).lbl;
  document.getElementById("catTxt").innerHTML=CAT_LABELS[q.cat]||"";
@@ -2846,6 +2876,7 @@ function pickAnswer(btn,opt,isCorrect,q){
  }
  document.getElementById("score").textContent=score;
  document.getElementById("nextBtn").className="next-btn show";
+ var sb=document.getElementById("skipBtn");if(sb)sb.style.display="none";
  // Start voice listening for "Ďalej" command
  setTimeout(startListenNext, 800);
 }
