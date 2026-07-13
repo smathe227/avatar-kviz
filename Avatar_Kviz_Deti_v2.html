@@ -2573,7 +2573,7 @@ function pickQuestions(){
  const cats={math:[],ava:[],safety:[],geo:[]};
  const cleanQ=QUESTIONS.filter(q=>q!==undefined&&q!==null);
  cleanQ.forEach(q=>{if(cats[q.cat])cats[q.cat].push(q)});
- const dist=[7,7,8,8]; // math, ava, safety, geo
+ const dist=[15,5,5,5]; // math, ava, safety, geo
  const ck=["math","ava","safety","geo"];
  let picked=[];
  ck.forEach((c,i)=>{
@@ -2592,12 +2592,21 @@ function pickQuestions(){
 function bestVoice(){
  const vv=speechSynthesis.getVoices();
  const ps=[
- v=>v.lang.startsWith("sk")&&/female|žena/i.test(v.name),
+ /* 1) TTSLíng – explicitný slovenský ženský hlas */
+ v=>/ling|ttsling|lingsapps|lings/i.test(v.name)&&v.lang.startsWith("sk"),
+ /* 2) TTSLíng – akékoľvek slovenské meno cez TTSLíng */
+ v=>/ling|ttsling|lingsapps|lings/i.test(v.name)&&/female|žena|Žena|Female/i.test(v.name),
+ /* 3) Akýkoľvek TTSLíng hlas (aj bez slovenčiny) */
+ v=>/ling|ttsling|lingsapps|lings/i.test(v.name),
+ /* 4) Slovenský ženský hlas (iné enginy – Google, Samsung atď.) */
+ v=>v.lang.startsWith("sk")&&/female|žena|Female/i.test(v.name),
+ v=>v.lang.startsWith("sk-SK")&&/female|žena|Žena|Female/i.test(v.name),
+ /* 5) Akýkoľvek slovenský hlas */
  v=>v.lang.startsWith("sk"),
- v=>v.lang.startsWith("cs")&&/female/i.test(v.name),
+ v=>v.lang.startsWith("cs")&&/female|žena/i.test(v.name),
  v=>v.lang.startsWith("cs"),
- v=>/zira|hazel|moira|victoria|fiona|karen|samantha|tessa/i.test(v.name),
- v=>/female|woman/i.test(v.name),
+ v=>/zira|hazel|moira|victoria|fiona|karen|samantha|tessa|leila|maja|zuzana|jana|petra|ivana|andrea|maria|jana|evica|zuzka|monika|danka|ivka/i.test(v.name),
+ v=>/female|woman|žena|Žena/i.test(v.name),
  v=>v.lang.startsWith("en"),
  ()=>true,
  ];
@@ -3054,7 +3063,7 @@ function pickAnswer(btn,opt,isCorrect,q){
  score+=10;corr++;
  fb.innerHTML="⭐ Správne! Výborne! ⭐";fb.className="feedback fb-ok";
  revealTile();
- if(audioOn)spk("Správne! Výborne, si šikovný!");
+ if(audioOn)spk("Správne! Výborne, si šikovná!");
  } else {
  btn.classList.add("wrong");
  wrong++;wrongByQ.push({q:q.q,cat:q.cat,yourAns:opt.txt,correct:q.a.txt});
@@ -3149,10 +3158,10 @@ function showEnd(){
 
  // Cheer
  const cheers=[
- "Si úžasný! Každý deň sa zlepšuješ! 🌈",
+ "Si úžasná! Každý deň sa zlepšuješ! 🌈",
  "Výborne! Na'vi by boli na teba hrdí! 💙",
  "Skvelá práca! Pokračuj tak! 🔥",
- "Si šikovný ako Jake Sully! 🪖",
+ "Si šikovná ako Jake Sully! 🪖",
  "Bravo! Pandora ťa víta! 🌿",
  ];
  document.getElementById("endCheer").innerHTML=
