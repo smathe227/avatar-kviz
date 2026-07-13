@@ -2680,14 +2680,14 @@ async function readFull(q,opts){
  setNR("🎙️ Čítam otázku…");
  await new Promise(r=>spk(audioText(q.q),()=>{if(readGen===myGen)r();}));
  if(readGen!==myGen||!speaking||!audioOn){setNR("");speaking=false;return;}
- await ms(2500);
+ await ms(3000);
  if(readGen!==myGen||!speaking||!audioOn){setNR("");speaking=false;return;}
  for(let i=0;i<opts.length;i++){
  if(readGen!==myGen||!audioOn||!speaking){setNR("");speaking=false;return;}
  setNR(`🎙️ Možnosť ${i+1}: ${opts[i].txt}`);
  await new Promise(r=>spk(`Možnosť ${i+1}: ${audioText(opts[i].txt)}`,()=>{if(readGen===myGen)r();}));
  if(readGen!==myGen||!speaking||!audioOn){setNR("");speaking=false;return;}
- await ms(2500);
+ await ms(3000);
  if(readGen!==myGen||!speaking||!audioOn){setNR("");speaking=false;return;}
  }
  setNR("");speaking=false;
