@@ -508,7 +508,7 @@ const AVATAR_IMAGES = [
 
 const QUESTIONS = [
 
- {cat:"math",type:"math",q:"Máš 4 jabĺčka a dá kamarátovi 3 jabĺčka. Koľko ti ostane?",mathQ:{g1:4,sign:"−",g2:3,res:1},a:{apples:1,txt:"1 jabĺčko"},w:[{apples:3,txt:"3 jabĺčka"},{apples:4,txt:"4 jabĺčka"},
+ {cat:"math",type:"math",q:"Máš 4 jabĺčka a dá kamarátovi 3 jabĺčka. Koľko ti ostane?",mathQ:{g1:4,sign:"−",g2:3,res:1},a:{apples:1,txt:"1 jabĺčko"},w:[{apples:3,txt:"3 jabĺčka"},{apples:4,txt:"4 jabĺčka"}]},
 {cat:"geo",type:"pic",q:"Je gulʹa rovnaký tvar ako kruh?",a:{img:"🔺",txt:"Nie, gulʹa je 3D a kruh je 2D"},w:[{img:"🟦",txt:"Áno, je to to isté"},{img:"🔵",txt:"Oboje je kruh"}]},
 {cat:"geo",type:"pic",q:"Ktorý tvar nemá žiadne strany?",a:{img:"🔺",txt:"Kruh"},w:[{img:"🟦",txt:"Trojuholník"},{img:"🔵",txt:"Štvorec"}]},
 {cat:"geo",type:"pic",q:"Má kosoštvorec rovnaké strany ako štvorec?",a:{img:"🔺",txt:"Áno, všetky strany sú rovnaké"},w:[{img:"🟦",txt:"Nie, strany sú rôzne"},{img:"🔵",txt:"Len niekedy"}]},
@@ -696,7 +696,7 @@ const QUESTIONS = [
 {cat:"safety",type:"pic",q:"Vidíš na hračke odtrhnutý malý kúsok. Čo urobíš?",a:{img:"✅",txt:"Poviem dospelému a nedám to deťom"},w:[{img:"🚫",txt:"Zlepím to"},{img:"🤔",txt:"Vyhodím to sám"}]},
 {cat:"safety",type:"pic",q:"Je bezpečné liezť na rebrík, ktorý nie je pevne postavený?",a:{img:"✅",txt:"Nie, rebrík sa môže pošmyknúť"},w:[{img:"🚫",txt:"Áno, ak sa držím"},{img:"🤔",txt:"Len po prvú priečku"}]},
 {cat:"safety",type:"pic",q:"Môžeš jesť jedlo, ktoré spadlo na zem?",a:{img:"✅",txt:"Nie, je špinavé a môže byť plné baktérií"},w:[{img:"🚫",txt:"Áno, ak ho hneď zdvihnem"},{img:"🤔",txt:"Len ak je suché"}]},
-{cat:"safety",type:"pic",q:"Cítis plyn v kuchyni. Čo urobíš?",a:{img:"✅",txt:"Zavolám dospelého a vetrám"},w:[{img:"🚫",txt:"Zapálim sviečku"},{img:"🤔",txt:"Hľadám unikajúci plyn"}]}]},
+{cat:"safety",type:"pic",q:"Cítis plyn v kuchyni. Čo urobíš?",a:{img:"✅",txt:"Zavolám dospelého a vetrám"},w:[{img:"🚫",txt:"Zapálim sviečku"},{img:"🤔",txt:"Hľadám unikajúci plyn"}]},
  {cat:"math",type:"math",q:"Máš 7 jabĺčok a mama ti dá ešte 0 jabĺčok. Koľko máš spolu?",mathQ:{g1:7,sign:"+",g2:0,res:7},a:{apples:7,txt:"7 jabĺčok"},w:[{apples:5,txt:"5 jabĺčok"},{apples:8,txt:"8 jabĺčok"}]},
  {cat:"math",type:"math",q:"Máš 10 jabĺčok a mama ti dá ešte 4 jabĺčka. Koľko máš spolu?",mathQ:{g1:10,sign:"+",g2:4,res:14},a:{apples:14,txt:"14 jabĺčok"},w:[{apples:11,txt:"11 jabĺčok"},{apples:15,txt:"15 jabĺčok"}]},
  {cat:"math",type:"math",q:"Máš 14 jabĺčok a odnesie 14 jabĺčok. Koľko ti ostane?",mathQ:{g1:14,sign:"−",g2:14,res:0},a:{apples:0,txt:"0 jabĺčok"},w:[{apples:1,txt:"1 jabĺčko"},{apples:4,txt:"4 jabĺčka"}]},
@@ -2573,7 +2573,7 @@ function pickQuestions(){
  const cats={math:[],ava:[],safety:[],geo:[]};
  const cleanQ=QUESTIONS.filter(q=>q!==undefined&&q!==null);
  cleanQ.forEach(q=>{if(cats[q.cat])cats[q.cat].push(q)});
- const dist=[7,7,8,8]; // math, ava, safety, geo
+ const dist=[15,5,5,5]; // math, ava, safety, geo
  const ck=["math","ava","safety","geo"];
  let picked=[];
  ck.forEach((c,i)=>{
@@ -2592,12 +2592,21 @@ function pickQuestions(){
 function bestVoice(){
  const vv=speechSynthesis.getVoices();
  const ps=[
- v=>v.lang.startsWith("sk")&&/female|žena/i.test(v.name),
+ /* 1) TTSLíng – explicitný slovenský ženský hlas */
+ v=>/ling|ttsling|lingsapps|lings/i.test(v.name)&&v.lang.startsWith("sk"),
+ /* 2) TTSLíng – akékoľvek slovenské meno cez TTSLíng */
+ v=>/ling|ttsling|lingsapps|lings/i.test(v.name)&&/female|žena|Žena|Female/i.test(v.name),
+ /* 3) Akýkoľvek TTSLíng hlas (aj bez slovenčiny) */
+ v=>/ling|ttsling|lingsapps|lings/i.test(v.name),
+ /* 4) Slovenský ženský hlas (iné enginy – Google, Samsung atď.) */
+ v=>v.lang.startsWith("sk")&&/female|žena|Female/i.test(v.name),
+ v=>v.lang.startsWith("sk-SK")&&/female|žena|Žena|Female/i.test(v.name),
+ /* 5) Akýkoľvek slovenský hlas */
  v=>v.lang.startsWith("sk"),
- v=>v.lang.startsWith("cs")&&/female/i.test(v.name),
+ v=>v.lang.startsWith("cs")&&/female|žena/i.test(v.name),
  v=>v.lang.startsWith("cs"),
- v=>/zira|hazel|moira|victoria|fiona|karen|samantha|tessa/i.test(v.name),
- v=>/female|woman/i.test(v.name),
+ v=>/zira|hazel|moira|victoria|fiona|karen|samantha|tessa|leila|maja|zuzana|jana|petra|ivana|andrea|maria|jana|evica|zuzka|monika|danka|ivka/i.test(v.name),
+ v=>/female|woman|žena|Žena/i.test(v.name),
  v=>v.lang.startsWith("en"),
  ()=>true,
  ];
@@ -3054,7 +3063,7 @@ function pickAnswer(btn,opt,isCorrect,q){
  score+=10;corr++;
  fb.innerHTML="⭐ Správne! Výborne! ⭐";fb.className="feedback fb-ok";
  revealTile();
- if(audioOn)spk("Správne! Výborne, si šikovný!");
+ if(audioOn)spk("Správne! Výborne, si šikovná!");
  } else {
  btn.classList.add("wrong");
  wrong++;wrongByQ.push({q:q.q,cat:q.cat,yourAns:opt.txt,correct:q.a.txt});
@@ -3149,10 +3158,10 @@ function showEnd(){
 
  // Cheer
  const cheers=[
- "Si úžasný! Každý deň sa zlepšuješ! 🌈",
+ "Si úžasná! Každý deň sa zlepšuješ! 🌈",
  "Výborne! Na'vi by boli na teba hrdí! 💙",
  "Skvelá práca! Pokračuj tak! 🔥",
- "Si šikovný ako Jake Sully! 🪖",
+ "Si šikovná ako Jake Sully! 🪖",
  "Bravo! Pandora ťa víta! 🌿",
  ];
  document.getElementById("endCheer").innerHTML=
