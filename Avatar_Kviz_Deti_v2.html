@@ -319,9 +319,9 @@ document.addEventListener("DOMContentLoaded", function() {
  <button class="btn btn-music" id="musicBtn" onclick="toggleMusic()">🎵 Hudba: ZAP</button>
  <button class="btn btn-voice" id="voiceBtn" onclick="toggleVoiceInput()">🎤 Hovor!</button>
  <button class="btn btn-repeat" onclick="doRepeat()">🔁 Znova</button>
- <button class="btn btn-skip" id="skipBtn" onclick="skipQuestion()">⏭️ Preskočiť</button>
- <button class="btn btn-reset" onclick="resetGame()">🔄 Reset</button>
- <button class="btn btn-end" onclick="endGame()">⏹ Koniec</button>
+ <button class="btn btn-skip" id="skipBtn" onclick="confirmClick('skipBtn',skipQuestion)">⏭️ Preskočiť</button>
+ <button class="btn btn-reset" id="resetBtn" onclick="confirmClick('resetBtn',resetGame)">🔄 Reset</button>
+ <button class="btn btn-end" id="endBtn" onclick="confirmClick('endBtn',endGame)">⏹ Koniec</button>
 </div>
 
 
@@ -442,7 +442,7 @@ document.addEventListener("DOMContentLoaded", function() {
  <div class="end-card" id="endWeak"></div>
  <div class="end-card" id="endAdvice"></div>
  <div class="end-card" id="endCheer"></div>
- <button class="restart-btn" onclick="resetGame()">🔄 Hrať znova!</button>
+ <button class="restart-btn" onclick="confirmClick('resetBtn',resetGame)">🔄 Hrať znova!</button>
  </div>
 
 
@@ -2713,6 +2713,19 @@ function setSpd(r,el){
 
 
 // ─── SKIP QUESTION ──────────────────────────────
+// ─── DOUBLE-CLICK SAFETY ──────────────────────
+const _confirmState={};
+function confirmClick(id,fn){
+ const now=Date.now();
+ if(_confirmState[id]&&(now-_confirmState[id]<2000)){
+  _confirmState[id]=null;fn();
+ }else{
+  _confirmState[id]=now;
+  const b=document.getElementById(id);
+  if(b){var orig=b.textContent;b.textContent="⚠️ Klikni ešte raz!";b.style.opacity="0.7";
+   setTimeout(()=>{b.textContent=orig;b.style.opacity="1";_confirmState[id]=null;},2000);}
+ }
+}
 function skipQuestion(){
  if(answered) return;
  spkGen++;speechSynthesis.cancel();speaking=false;stopRecog();
@@ -3175,8 +3188,8 @@ function showEnd(){
 // ─── RESET / END ─────────────────────────────────
 function resetGame(){
  spkGen++;speechSynthesis.cancel();speaking=false;stopRecog();
- if(!musicOn){musicOn=true;if(window.YT_player){try{YT_player.playVideo();YT_player.unMute();YT_player.setVolume(Math.round(musicVol*100));}catch(e){}}updateMusicBtn();}
- var ms=document.getElementById("musicStatus");if(ms)ms.textContent="🎵 Hrá";
+ if(musicOn&&window.YT_player){try{YT_player.playVideo();YT_player.unMute();YT_player.setVolume(Math.round(musicVol*100));}catch(e){}}updateMusicBtn();
+ var ms=document.getElementById("musicStatus");if(ms)ms.textContent=musicOn?"🎵 Hrá":"🔇 Stop";
  imgIdx=Math.floor(Math.random()*AVATAR_IMAGES.length);
  questions=pickQuestions();
  cur=0;score=0;corr=0;wrong=0;revd=0;wrongByQ=[];
@@ -3194,7 +3207,7 @@ function endGame(){spkGen++;speechSynthesis.cancel();speaking=false;stopRecog();
 // ─── INIT ────────────────────────────────────────
 
 // ─── BACKGROUND MUSIC (direct YouTube embed) ──
-var musicOn=true;
+var musicOn=false;
 var musicVol=0.2;
 
 // Send command to YouTube embed iframe via postMessage
