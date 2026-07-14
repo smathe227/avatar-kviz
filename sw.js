@@ -1,4 +1,4 @@
-const CACHE = 'avatar-kviz-v8';
+const CACHE = 'avatar-kviz-v9';
 const URLS = [
   'Avatar_Kviz_Deti_v2.html',
   'manifest.json',
